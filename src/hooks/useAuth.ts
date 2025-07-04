@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Profile } from '../types';
@@ -8,36 +8,7 @@ export const useAuth = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('🔐 Session:', session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('🔄 Auth event:', event, session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-        } else {
-          setProfile(null);
-          setLoading(false);
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string) => {
     try {
       console.log('👤 Fetching profile for user:', userId);
       
@@ -63,10 +34,8 @@ export const useAuth = () => {
       }
     } catch (error) {
       console.error('💥 Error fetching profile:', error);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, []);
 
   const createMissingProfile = async (userId: string) => {
     try {
@@ -96,6 +65,66 @@ export const useAuth = () => {
       console.error('💥 Error creating profile:', error);
     }
   };
+
+  useEffect(() => {
+    let mounted = true;
+
+    // Get initial session
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('❌ Error getting session:', error);
+          if (mounted) {
+            setLoading(false);
+          }
+          return;
+        }
+
+        console.log('🔐 Initial session:', session?.user?.email || 'No session');
+        
+        if (mounted) {
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            await fetchProfile(session.user.id);
+          }
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('💥 Error in getInitialSession:', error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    getInitialSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('🔄 Auth event:', event, session?.user?.email || 'No user');
+        
+        if (!mounted) return;
+
+        setUser(session?.user ?? null);
+        
+        if (session?.user && event !== 'TOKEN_REFRESHED') {
+          await fetchProfile(session.user.id);
+        } else if (!session?.user) {
+          setProfile(null);
+        }
+        
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [fetchProfile]);
 
   const signIn = async (email: string, password: string) => {
     console.log('🚀 Attempting sign in for:', email);
@@ -131,6 +160,10 @@ export const useAuth = () => {
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
+    if (!error) {
+      setUser(null);
+      setProfile(null);
+    }
     return { error };
   };
 

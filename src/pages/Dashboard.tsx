@@ -6,12 +6,12 @@ import { Booking, Car } from '../types';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
-import { 
-  Calendar, 
-  Car as CarIcon, 
-  CreditCard, 
-  User, 
-  Phone, 
+import {
+  Calendar,
+  Car as CarIcon,
+  CreditCard,
+  User,
+  Phone,
   Mail,
   Clock,
   CheckCircle,
@@ -94,22 +94,54 @@ const Dashboard: React.FC = () => {
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
-      
+
       if (!event.target.files || event.target.files.length === 0) {
         throw new Error('Vous devez sélectionner une image à uploader.');
       }
 
       const file = event.target.files[0];
+
+      // Vérifier la taille du fichier (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        throw new Error('Le fichier est trop volumineux. Taille maximum : 2MB');
+      }
+
+      // Vérifier le type de fichier
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Veuillez sélectionner un fichier image valide.');
+      }
+
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}-${Math.random()}.${fileExt}`;
+      const fileName = `${user?.id}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
+
+      // Créer le bucket s'il n'existe pas
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const avatarBucket = buckets?.find(bucket => bucket.name === 'avatars');
+
+      if (!avatarBucket) {
+        const { error: bucketError } = await supabase.storage.createBucket('avatars', {
+          public: true,
+          allowedMimeTypes: ['image/*'],
+          fileSizeLimit: 2097152 // 2MB
+        });
+
+        if (bucketError) {
+          console.error('Error creating bucket:', bucketError);
+          throw new Error('Erreur lors de la création du stockage');
+        }
+      }
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
       if (uploadError) {
-        throw uploadError;
+        console.error('Upload error:', uploadError);
+        throw new Error('Erreur lors de l\'upload de l\'image');
       }
 
       const { data } = supabase.storage
@@ -124,13 +156,20 @@ const Dashboard: React.FC = () => {
         .eq('id', user?.id);
 
       if (updateError) {
-        throw updateError;
+        console.error('Update error:', updateError);
+        throw new Error('Erreur lors de la mise à jour du profil');
       }
 
       toast.success('Photo de profil mise à jour !');
-      window.location.reload();
+
+      // Attendre un peu avant de recharger pour que l'image soit disponible
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+
     } catch (error: any) {
-      toast.error(error.message);
+      console.error('Avatar upload error:', error);
+      toast.error(error.message || 'Erreur lors de l\'upload');
     } finally {
       setUploading(false);
     }
@@ -227,17 +266,22 @@ const Dashboard: React.FC = () => {
                 <div className="flex flex-col items-center mb-6">
                   <div className="relative">
                     {profile?.avatar_url ? (
-                      <img 
-                        src={profile.avatar_url} 
-                        alt="Profile" 
+                      <img
+                        src={profile.avatar_url}
+                        alt="Profile"
                         className="w-24 h-24 rounded-full object-cover"
+                        onError={(e) => {
+                          // Si l'image ne charge pas, afficher l'avatar par défaut
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
                       />
-                    ) : (
-                      <div className="w-24 h-24 bg-gold-500 rounded-full flex items-center justify-center">
-                        <User size={32} className="text-white" />
-                      </div>
-                    )}
-                    
+                    ) : null}
+
+                    <div className={`w-24 h-24 bg-gold-500 rounded-full flex items-center justify-center ${profile?.avatar_url ? 'hidden' : ''}`}>
+                      <User size={32} className="text-white" />
+                    </div>
+
                     <label className="absolute bottom-0 right-0 bg-white rounded-full p-2 shadow-md cursor-pointer hover:bg-gray-50">
                       <Camera size={16} className="text-gray-600" />
                       <input
@@ -249,12 +293,12 @@ const Dashboard: React.FC = () => {
                       />
                     </label>
                   </div>
-                  
+
                   {uploading && (
                     <p className="text-sm text-gray-500 mt-2">Upload en cours...</p>
                   )}
                 </div>
-                
+
                 <div className="space-y-4">
                   {isEditing ? (
                     <>
@@ -269,7 +313,7 @@ const Dashboard: React.FC = () => {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gold-500 focus:border-transparent"
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Téléphone
@@ -281,7 +325,7 @@ const Dashboard: React.FC = () => {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-gold-500 focus:border-transparent"
                         />
                       </div>
-                      
+
                       <div className="flex space-x-2">
                         <button
                           onClick={handleProfileUpdate}
@@ -308,7 +352,7 @@ const Dashboard: React.FC = () => {
                           <p className="text-sm text-gray-600">Nom complet</p>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center space-x-3">
                         <Mail className="h-5 w-5 text-gray-400" />
                         <div>
@@ -316,11 +360,11 @@ const Dashboard: React.FC = () => {
                           <p className="text-sm text-gray-600">Email</p>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center space-x-3">
                         <Phone className="h-5 w-5 text-gray-400" />
                         <div>
-                          <p className="font-medium">{profile?.phone}</p>
+                          <p className="font-medium">{profile?.phone || 'Non renseigné'}</p>
                           <p className="text-sm text-gray-600">Téléphone</p>
                         </div>
                       </div>
@@ -332,20 +376,20 @@ const Dashboard: React.FC = () => {
               {/* Quick Stats */}
               <div className="mt-6 bg-white rounded-lg shadow-md p-6">
                 <h3 className="text-lg font-bold mb-4">Statistiques</h3>
-                
+
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Total réservations:</span>
                     <span className="font-bold">{bookings.length}</span>
                   </div>
-                  
+
                   <div className="flex justify-between">
                     <span className="text-gray-600">Réservations actives:</span>
                     <span className="font-bold text-green-600">
                       {bookings.filter(b => b.status === 'confirmed').length}
                     </span>
                   </div>
-                  
+
                   <div className="flex justify-between">
                     <span className="text-gray-600">Total dépensé:</span>
                     <span className="font-bold text-gold-600">
@@ -365,7 +409,7 @@ const Dashboard: React.FC = () => {
             >
               <div className="bg-white rounded-lg shadow-md p-6">
                 <h2 className="text-xl font-bold mb-6">Mes Réservations</h2>
-                
+
                 {bookings.length === 0 ? (
                   <div className="text-center py-8">
                     <CarIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -398,21 +442,21 @@ const Dashboard: React.FC = () => {
                                 className="w-16 h-16 object-cover rounded-md"
                               />
                             )}
-                            
+
                             <div className="flex-1">
                               <h4 className="font-bold text-lg">
                                 {booking.car?.brand} {booking.car?.name}
                               </h4>
-                              
+
                               <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
                                 <div className="flex items-center space-x-1">
                                   <Calendar className="h-4 w-4" />
                                   <span>
-                                    {format(new Date(booking.start_date), 'dd MMM yyyy', { locale: fr })} - 
+                                    {format(new Date(booking.start_date), 'dd MMM yyyy', { locale: fr })} -
                                     {format(new Date(booking.end_date), 'dd MMM yyyy', { locale: fr })}
                                   </span>
                                 </div>
-                                
+
                                 <div className="flex items-center space-x-1">
                                   <CreditCard className="h-4 w-4" />
                                   <span>{booking.total_amount}€</span>
@@ -420,7 +464,7 @@ const Dashboard: React.FC = () => {
                               </div>
                             </div>
                           </div>
-                          
+
                           <div className="flex flex-col items-end space-y-2">
                             <div className="flex items-center space-x-2">
                               {getStatusIcon(booking.status)}
@@ -428,13 +472,13 @@ const Dashboard: React.FC = () => {
                                 {getStatusText(booking.status)}
                               </span>
                             </div>
-                            
+
                             <p className="text-xs text-gray-500">
                               Créée le {format(new Date(booking.created_at), 'dd/MM/yyyy', { locale: fr })}
                             </p>
                           </div>
                         </div>
-                        
+
                         {booking.status === 'pending' && (
                           <div className="mt-4 flex space-x-2">
                             <button className="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-800 text-sm rounded-md transition-colors">

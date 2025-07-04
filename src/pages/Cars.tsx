@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Car } from '../types';
+import { Car } from '../types/index';
 import CarCard from '../components/CarCard';
 import Navbar from '../components/Navbar';
 import { Filter, Search } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const Cars: React.FC = () => {
   const [cars, setCars] = useState<Car[]>([]);
@@ -24,16 +25,27 @@ const Cars: React.FC = () => {
 
   const fetchCars = async () => {
     try {
+      console.log('🚗 Fetching cars...');
+      
       const { data, error } = await supabase
         .from('cars')
         .select('*')
         .eq('available', true)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      console.log('🎯 Cars query result:', { data, error, count: data?.length });
+
+      if (error) {
+        console.error('❌ Error fetching cars:', error);
+        toast.error('Erreur lors du chargement des véhicules');
+        throw error;
+      }
+      
       setCars(data || []);
+      console.log('✅ Cars loaded successfully:', data?.length);
     } catch (error) {
-      console.error('Error fetching cars:', error);
+      console.error('💥 Error in fetchCars:', error);
+      toast.error('Impossible de charger les véhicules');
     } finally {
       setLoading(false);
     }
@@ -46,12 +58,17 @@ const Cars: React.FC = () => {
     return matchesSearch && matchesCategory;
   });
 
+  console.log('🔍 Filtered cars:', filteredCars.length, 'from total:', cars.length);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
         <div className="pt-16 flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gold-500"></div>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gold-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">Chargement des véhicules...</p>
+          </div>
         </div>
       </div>
     );
@@ -105,20 +122,59 @@ const Cars: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Cars Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredCars.map((car, index) => (
-              <CarCard key={car.id} car={car} index={index} />
-            ))}
-          </div>
+          {/* Debug Info */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
+              <h3 className="font-bold text-blue-800 mb-2">Debug Info:</h3>
+              <p className="text-blue-700">Total cars: {cars.length}</p>
+              <p className="text-blue-700">Filtered cars: {filteredCars.length}</p>
+              <p className="text-blue-700">Selected category: {selectedCategory}</p>
+              <p className="text-blue-700">Search term: "{searchTerm}"</p>
+            </div>
+          )}
 
-          {filteredCars.length === 0 && (
+          {/* Cars Grid */}
+          {filteredCars.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredCars.map((car, index) => (
+                <CarCard key={car.id} car={car} index={index} />
+              ))}
+            </div>
+          ) : cars.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center py-12"
+            >
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8">
+                <h3 className="text-xl font-bold text-yellow-800 mb-2">Aucun véhicule trouvé</h3>
+                <p className="text-yellow-700 mb-4">
+                  Il semble qu'il y ait un problème de connexion à la base de données.
+                </p>
+                <button 
+                  onClick={fetchCars}
+                  className="bg-gold-500 hover:bg-gold-600 text-white px-6 py-2 rounded-lg transition-colors"
+                >
+                  Réessayer
+                </button>
+              </div>
+            </motion.div>
+          ) : (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="text-center py-12"
             >
               <p className="text-xl text-gray-600">Aucun véhicule trouvé pour vos critères de recherche.</p>
+              <button 
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedCategory('all');
+                }}
+                className="mt-4 bg-gold-500 hover:bg-gold-600 text-white px-6 py-2 rounded-lg transition-colors"
+              >
+                Réinitialiser les filtres
+              </button>
             </motion.div>
           )}
         </div>
