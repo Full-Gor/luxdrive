@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Menu, X, User, LogOut, Settings, Car as CarIcon } from 'lucide-react';
-import Logo from './Logo';
+import { Menu, X, User, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, loading, initialized } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -20,13 +19,31 @@ const Navbar: React.FC = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
+  // Afficher un état de chargement minimal pendant l'initialisation
+  if (!initialized && loading) {
+    return (
+      <nav className="bg-white shadow-md fixed top-0 left-0 right-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 md:px-12">
+          <div className="flex justify-between items-center h-16">
+            <Link to="/" className="flex items-center">
+              <span className="text-gray-900 text-xl font-bold">LuxDrive</span>
+            </Link>
+            <div className="animate-pulse">
+              <div className="h-8 w-20 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
   return (
     <nav className="bg-white shadow-md fixed top-0 left-0 right-0 z-50">
       <div className="max-w-7xl mx-auto px-6 md:px-12">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link to="/">
-            <Logo />
+          {/* Logo - Titre seulement */}
+          <Link to="/" className="flex items-center">
+            <span className="text-gray-900 text-xl font-bold">LuxDrive</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -64,13 +81,21 @@ const Navbar: React.FC = () => {
                       src={profile.avatar_url} 
                       alt="Profile" 
                       className="w-8 h-8 rounded-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                        if (nextElement) {
+                          nextElement.style.display = 'flex';
+                        }
+                      }}
                     />
-                  ) : (
-                    <div className="w-8 h-8 bg-gold-500 rounded-full flex items-center justify-center">
-                      <User size={16} className="text-white" />
-                    </div>
-                  )}
-                  <span className="font-medium">{profile?.full_name}</span>
+                  ) : null}
+                  
+                  <div className={`w-8 h-8 bg-gold-500 rounded-full flex items-center justify-center ${profile?.avatar_url ? 'hidden' : ''}`}>
+                    <User size={16} className="text-white" />
+                  </div>
+                  
+                  <span className="font-medium">{profile?.full_name || 'Utilisateur'}</span>
                 </button>
 
                 {isProfileOpen && (

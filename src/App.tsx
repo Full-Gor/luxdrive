@@ -15,17 +15,28 @@ import AdminDashboard from './pages/AdminDashboard';
 import Contact from './pages/Contact';
 import NotFound from './pages/NotFound';
 
+// Legal Pages
+import MentionsLegales from './pages/MentionsLegales';
+import PolitiqueConfidentialite from './pages/PolitiqueConfidentialite';
+import CGV from './pages/CGV';
+import CGU from './pages/CGU';
+import Cookies from './pages/Cookies';
+
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 
 function App() {
-  const { loading } = useAuth();
+  const { loading, initialized } = useAuth();
 
-  if (loading) {
+  // Afficher un loader global pendant l'initialisation
+  if (!initialized && loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gold-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gold-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Chargement de l'application...</p>
+        </div>
       </div>
     );
   }
@@ -40,6 +51,13 @@ function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          
+          {/* Legal Pages */}
+          <Route path="/mentions-legales" element={<MentionsLegales />} />
+          <Route path="/politique-confidentialite" element={<PolitiqueConfidentialite />} />
+          <Route path="/cgv" element={<CGV />} />
+          <Route path="/cgu" element={<CGU />} />
+          <Route path="/cookies" element={<Cookies />} />
           
           {/* Protected Routes */}
           <Route path="/booking/:carId" element={

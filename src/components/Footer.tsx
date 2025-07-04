@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import Logo from './Logo';
 import { Phone, Mail, MapPin, Facebook, Instagram, Twitter } from 'lucide-react';
 
 const Footer: React.FC = () => {
@@ -9,7 +8,9 @@ const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto px-6 md:px-12 py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
-            <Logo />
+            <div className="flex items-center space-x-2 mb-4">
+              <span className="text-white text-xl font-bold">LuxDrive</span>
+            </div>
             <p className="mt-4 text-gray-400">
               L'excellence automobile à votre service depuis 2010. Découvrez le plaisir de conduire avec LuxDrive.
             </p>
@@ -41,11 +42,11 @@ const Footer: React.FC = () => {
           <div>
             <h4 className="text-lg font-bold mb-4">Informations Légales</h4>
             <ul className="space-y-2">
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Mentions Légales</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Politique de Confidentialité</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">CGV</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">CGU</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Cookies</a></li>
+              <li><Link to="/mentions-legales" className="text-gray-400 hover:text-white transition-colors">Mentions Légales</Link></li>
+              <li><Link to="/politique-confidentialite" className="text-gray-400 hover:text-white transition-colors">Politique de Confidentialité</Link></li>
+              <li><Link to="/cgv" className="text-gray-400 hover:text-white transition-colors">CGV</Link></li>
+              <li><Link to="/cgu" className="text-gray-400 hover:text-white transition-colors">CGU</Link></li>
+              <li><Link to="/cookies" className="text-gray-400 hover:text-white transition-colors">Cookies</Link></li>
             </ul>
           </div>
           

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronsDown, Menu, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import Logo from './Logo';
 import { useAuth } from '../hooks/useAuth';
 
 const Header: React.FC = () => {
@@ -46,8 +45,9 @@ const Header: React.FC = () => {
 
       {/* Navigation */}
       <nav className="relative z-20 flex justify-between items-center px-6 md:px-12 py-6">
-        <Link to="/">
-          <Logo />
+        {/* Logo - Titre seulement sans icône */}
+        <Link to="/" className="flex items-center">
+          <span className="text-white text-xl font-bold">LuxDrive</span>
         </Link>
         
         <div className="hidden md:flex space-x-8 text-white">
