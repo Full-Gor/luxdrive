@@ -1,16 +1,24 @@
 import React, { useEffect, useRef } from 'react';
 import { useCarRental } from '../context/CarRentalContext';
 import { useInView } from '../hooks/useInView';
-import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 const CarShowcase: React.FC = () => {
-  const { cars, openModal } = useCarRental();
+  const { cars } = useCarRental();
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const handleTryOut = (car: any) => {
-    toast.success(`Essai gratuit demandé pour ${car.brand} ${car.name} ! Nous vous contacterons bientôt.`, {
-      duration: 4000,
-      icon: '🚗',
-    });
+  const handleViewDetails = (carId: string) => {
+    navigate(`/cars/${carId}`);
+  };
+
+  const handleBooking = (carId: string) => {
+    if (user) {
+      navigate(`/booking/${carId}`);
+    } else {
+      navigate('/login');
+    }
   };
 
   return (
@@ -25,8 +33,8 @@ const CarShowcase: React.FC = () => {
             <CarCard
               key={car.id}
               car={car}
-              onRequestOffer={() => openModal(car)}
-              onTryOut={() => handleTryOut(car)}
+              onViewDetails={() => handleViewDetails(car.id)}
+              onBooking={() => handleBooking(car.id)}
             />
           ))}
         </div>
@@ -37,9 +45,9 @@ const CarShowcase: React.FC = () => {
 
 const CarCard: React.FC<{
   car: any;
-  onRequestOffer: () => void;
-  onTryOut: () => void;
-}> = ({ car, onRequestOffer, onTryOut }) => {
+  onViewDetails: () => void;
+  onBooking: () => void;
+}> = ({ car, onViewDetails, onBooking }) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(cardRef, { threshold: 0.3 });
 
@@ -71,16 +79,16 @@ const CarCard: React.FC<{
 
           <div className="flex space-x-3">
             <button
-              onClick={onTryOut}
+              onClick={onViewDetails}
               className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-md font-medium transition-colors"
             >
-              Essayer
+              Voir détails
             </button>
             <button
-              onClick={onRequestOffer}
+              onClick={onBooking}
               className="flex-1 bg-gold-500 hover:bg-gold-600 text-white py-2 px-4 rounded-md font-medium transition-colors"
             >
-              Demander une offre
+              Réserver
             </button>
           </div>
         </div>
