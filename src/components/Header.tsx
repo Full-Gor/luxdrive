@@ -14,6 +14,13 @@ const Header: React.FC = () => {
     navigate('/');
   };
 
+  const handleProtectedNavigation = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
+    if (!user) {
+      e.preventDefault();
+      navigate('/login');
+    }
+  };
+
   return (
     <header className="relative h-screen w-full overflow-hidden">
       {/* Video Background - Nouvelle vidéo supercar */}
@@ -51,9 +58,9 @@ const Header: React.FC = () => {
         </Link>
         
         <div className="hidden md:flex space-x-8 text-white">
-          <Link to="/cars" className="hover:text-gold-400 transition-colors duration-300">Modèles</Link>
-          <Link to="/cars?category=electric" className="hover:text-gold-400 transition-colors duration-300">Gamme Électrique</Link>
-          <Link to="/cars?category=used" className="hover:text-gold-400 transition-colors duration-300">Occasions</Link>
+          <Link to="/cars" onClick={(e) => handleProtectedNavigation(e, '/cars')} className="hover:text-gold-400 transition-colors duration-300">Modèles</Link>
+          <Link to="/cars?category=electric" onClick={(e) => handleProtectedNavigation(e, '/cars?category=electric')} className="hover:text-gold-400 transition-colors duration-300">Gamme Électrique</Link>
+          <Link to="/cars?category=used" onClick={(e) => handleProtectedNavigation(e, '/cars?category=used')} className="hover:text-gold-400 transition-colors duration-300">Occasions</Link>
           <Link to="/contact" className="hover:text-gold-400 transition-colors duration-300">Contact</Link>
         </div>
         
@@ -107,9 +114,9 @@ const Header: React.FC = () => {
           className="absolute top-20 left-0 right-0 bg-black/90 backdrop-blur-sm z-30 p-6"
         >
           <div className="flex flex-col space-y-4 text-white">
-            <Link to="/cars" className="hover:text-gold-400 transition-colors">Modèles</Link>
-            <Link to="/cars?category=electric" className="hover:text-gold-400 transition-colors">Gamme Électrique</Link>
-            <Link to="/cars?category=used" className="hover:text-gold-400 transition-colors">Occasions</Link>
+            <Link to="/cars" onClick={(e) => handleProtectedNavigation(e, '/cars')} className="hover:text-gold-400 transition-colors">Modèles</Link>
+            <Link to="/cars?category=electric" onClick={(e) => handleProtectedNavigation(e, '/cars?category=electric')} className="hover:text-gold-400 transition-colors">Gamme Électrique</Link>
+            <Link to="/cars?category=used" onClick={(e) => handleProtectedNavigation(e, '/cars?category=used')} className="hover:text-gold-400 transition-colors">Occasions</Link>
             <Link to="/contact" className="hover:text-gold-400 transition-colors">Contact</Link>
             {user ? (
               <>
@@ -159,8 +166,9 @@ const Header: React.FC = () => {
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 0.6 }}
         >
-          <Link 
-            to="/cars" 
+          <Link
+            to="/cars"
+            onClick={(e) => handleProtectedNavigation(e, '/cars')}
             className="bg-gold-500 hover:bg-gold-600 text-black font-bold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105"
           >
             Découvrir nos véhicules

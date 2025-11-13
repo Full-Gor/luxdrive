@@ -46,8 +46,16 @@ function App() {
       <div className="font-sans">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/cars" element={<Cars />} />
-          <Route path="/cars/:id" element={<CarDetail />} />
+          <Route path="/cars" element={
+            <ProtectedRoute>
+              <Cars />
+            </ProtectedRoute>
+          } />
+          <Route path="/cars/:id" element={
+            <ProtectedRoute>
+              <CarDetail />
+            </ProtectedRoute>
+          } />
           <Route path="/contact" element={<Contact />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

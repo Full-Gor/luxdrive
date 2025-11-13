@@ -1,176 +1,142 @@
-import { useState, useEffect, useCallback } from 'react';
-import { User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
-import { Profile } from '../types';
+import { useState, useEffect } from 'react';
+
+export interface LocalUser {
+  id: string;
+  email: string;
+  full_name: string;
+  phone: string;
+  role: 'user' | 'admin';
+  avatar_url?: string;
+}
+
+// Initialiser le système avec un compte par défaut
+const initializeDefaultUser = () => {
+  const users = localStorage.getItem('luxdrive_users');
+  if (!users) {
+    const defaultUsers = [
+      {
+        id: '1',
+        email: 'user',
+        password: 'user123',
+        full_name: 'Utilisateur',
+        phone: '',
+        role: 'user' as const,
+      }
+    ];
+    localStorage.setItem('luxdrive_users', JSON.stringify(defaultUsers));
+  }
+};
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [user, setUser] = useState<LocalUser | null>(null);
+  const [profile, setProfile] = useState<LocalUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
-  const fetchProfile = useCallback(async (userId: string) => {
-    try {
-      console.log('👤 Fetching profile for user:', userId);
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+  // Charger l'utilisateur depuis le localStorage au démarrage
+  useEffect(() => {
+    initializeDefaultUser();
 
-      console.log('📊 Profile query result:', { data, error });
-
-      if (error) {
-        console.error('❌ Error fetching profile:', error);
-        
-        // Si le profil n'existe pas, le créer
-        if (error.code === 'PGRST116') {
-          console.log('🆕 Profile not found, creating...');
-          await createMissingProfile(userId);
-        }
-      } else {
-        console.log('✅ Profile found:', data);
-        setProfile(data);
+    const currentUser = localStorage.getItem('luxdrive_current_user');
+    if (currentUser) {
+      try {
+        const userData = JSON.parse(currentUser);
+        setUser(userData);
+        setProfile(userData);
+      } catch (error) {
+        console.error('Erreur lors du chargement de l\'utilisateur:', error);
       }
-    } catch (error) {
-      console.error('💥 Error fetching profile:', error);
     }
+
+    setLoading(false);
+    setInitialized(true);
   }, []);
 
-  const createMissingProfile = async (userId: string) => {
+  const signIn = async (email: string, password: string) => {
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData.user) {
-        console.log('🔨 Creating profile for:', userData.user.email);
-        
-        const { data, error } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            email: userData.user.email || '',
-            full_name: userData.user.user_metadata?.full_name || 'Utilisateur',
-            phone: userData.user.user_metadata?.phone || '',
-            role: 'user',
-          })
-          .select()
-          .single();
+      const users = JSON.parse(localStorage.getItem('luxdrive_users') || '[]');
+      const foundUser = users.find(
+        (u: any) => u.email === email && u.password === password
+      );
 
-        console.log('🎯 Profile creation result:', { data, error });
+      if (foundUser) {
+        const { password: _, ...userWithoutPassword } = foundUser;
+        setUser(userWithoutPassword);
+        setProfile(userWithoutPassword);
+        localStorage.setItem('luxdrive_current_user', JSON.stringify(userWithoutPassword));
 
-        if (!error) {
-          setProfile(data);
-        }
+        return { data: { user: userWithoutPassword }, error: null };
+      } else {
+        return {
+          data: { user: null },
+          error: { message: 'Email ou mot de passe incorrect' }
+        };
       }
     } catch (error) {
-      console.error('💥 Error creating profile:', error);
+      return {
+        data: { user: null },
+        error: { message: 'Erreur lors de la connexion' }
+      };
     }
   };
 
-  useEffect(() => {
-    let mounted = true;
+  const signUp = async (
+    email: string,
+    password: string,
+    fullName: string,
+    phone: string
+  ) => {
+    try {
+      const users = JSON.parse(localStorage.getItem('luxdrive_users') || '[]');
 
-    // Get initial session
-    const getInitialSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('❌ Error getting session:', error);
-          if (mounted) {
-            setLoading(false);
-          }
-          return;
-        }
-
-        console.log('🔐 Initial session:', session?.user?.email || 'No session');
-        
-        if (mounted) {
-          setUser(session?.user ?? null);
-          if (session?.user) {
-            await fetchProfile(session.user.id);
-          }
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('💥 Error in getInitialSession:', error);
-        if (mounted) {
-          setLoading(false);
-        }
+      // Vérifier si l'utilisateur existe déjà
+      const existingUser = users.find((u: any) => u.email === email);
+      if (existingUser) {
+        return {
+          data: { user: null },
+          error: { message: 'Cet email est déjà utilisé' }
+        };
       }
-    };
 
-    getInitialSession();
+      // Créer le nouvel utilisateur
+      const newUser = {
+        id: Date.now().toString(),
+        email,
+        password,
+        full_name: fullName,
+        phone,
+        role: 'user' as const,
+      };
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('🔄 Auth event:', event, session?.user?.email || 'No user');
-        
-        if (!mounted) return;
+      users.push(newUser);
+      localStorage.setItem('luxdrive_users', JSON.stringify(users));
 
-        setUser(session?.user ?? null);
-        
-        if (session?.user && event !== 'TOKEN_REFRESHED') {
-          await fetchProfile(session.user.id);
-        } else if (!session?.user) {
-          setProfile(null);
-        }
-        
-        setLoading(false);
-      }
-    );
+      const { password: _, ...userWithoutPassword } = newUser;
+      setUser(userWithoutPassword);
+      setProfile(userWithoutPassword);
+      localStorage.setItem('luxdrive_current_user', JSON.stringify(userWithoutPassword));
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [fetchProfile]);
-
-  const signIn = async (email: string, password: string) => {
-    console.log('🚀 Attempting sign in for:', email);
-    
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    console.log('🎯 Sign in result:', { 
-      success: !error, 
-      user: data.user?.email,
-      error: error?.message 
-    });
-    
-    return { data, error };
-  };
-
-  const signUp = async (email: string, password: string, fullName: string, phone: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          phone: phone,
-        }
-      }
-    });
-
-    return { data, error };
+      return { data: { user: userWithoutPassword }, error: null };
+    } catch (error) {
+      return {
+        data: { user: null },
+        error: { message: 'Erreur lors de l\'inscription' }
+      };
+    }
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
-      setUser(null);
-      setProfile(null);
-    }
-    return { error };
+    setUser(null);
+    setProfile(null);
+    localStorage.removeItem('luxdrive_current_user');
+    return { error: null };
   };
 
   return {
     user,
     profile,
     loading,
+    initialized,
     signIn,
     signUp,
     signOut,
