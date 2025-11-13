@@ -16,7 +16,7 @@ const initializeDefaultUser = () => {
     const defaultUsers = [
       {
         id: '1',
-        email: 'user',
+        email: 'user@luxdrive.com',
         password: 'user123',
         full_name: 'Utilisateur',
         phone: '',
