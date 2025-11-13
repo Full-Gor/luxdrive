@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { supabase } from '../lib/supabase';
 import { Car } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import Navbar from '../components/Navbar';
+import { getCars, initializeCars } from '../data/mockCars';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -32,14 +32,18 @@ const CarDetail: React.FC = () => {
 
   const fetchCar = async (carId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('cars')
-        .select('*')
-        .eq('id', carId)
-        .single();
+      // Initialiser les voitures si nécessaire
+      initializeCars();
 
-      if (error) throw error;
-      setCar(data);
+      // Récupérer toutes les voitures
+      const cars = getCars();
+
+      // Trouver la voiture par ID
+      const foundCar = cars.find(c => c.id === carId);
+
+      if (foundCar) {
+        setCar(foundCar);
+      }
     } catch (error) {
       console.error('Error fetching car:', error);
     } finally {
