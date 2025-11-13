@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
 import { Car } from '../types/index';
 import CarCard from '../components/CarCard';
 import Navbar from '../components/Navbar';
 import { Filter, Search } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { initializeCars, getCars } from '../data/mockCars';
 
 const Cars: React.FC = () => {
   const [cars, setCars] = useState<Car[]>([]);
@@ -25,27 +24,18 @@ const Cars: React.FC = () => {
 
   const fetchCars = async () => {
     try {
-      console.log('🚗 Fetching cars...');
-      
-      const { data, error } = await supabase
-        .from('cars')
-        .select('*')
-        .eq('available', true)
-        .order('created_at', { ascending: false });
+      console.log('🚗 Loading cars from localStorage...');
 
-      console.log('🎯 Cars query result:', { data, error, count: data?.length });
+      // Initialiser les voitures si nécessaire
+      initializeCars();
 
-      if (error) {
-        console.error('❌ Error fetching cars:', error);
-        toast.error('Erreur lors du chargement des véhicules');
-        throw error;
-      }
-      
-      setCars(data || []);
-      console.log('✅ Cars loaded successfully:', data?.length);
+      // Récupérer les voitures
+      const data = getCars();
+
+      console.log('✅ Cars loaded successfully:', data.length);
+      setCars(data);
     } catch (error) {
       console.error('💥 Error in fetchCars:', error);
-      toast.error('Impossible de charger les véhicules');
     } finally {
       setLoading(false);
     }
